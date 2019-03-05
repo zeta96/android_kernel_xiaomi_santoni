@@ -353,7 +353,8 @@ include $(srctree)/scripts/Kbuild.include
 # Make variables (CC, etc...)
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-REAL_CC		= $(CROSS_COMPILE)gcc
+LDGOLD		= $(CROSS_COMPILE)ld.gold
+CC		= $(CROSS_COMPILE)gcc
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -368,9 +369,7 @@ PERL		= perl
 PYTHON		= python
 CHECK		= sparse
 
-# Use the wrapper for the compiler.  This wrapper scans for new
-# warnings and causes the build to stop upon encountering them.
-CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
+
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
@@ -616,9 +615,28 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, int-in-bool-context)
-KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
-KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
-KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
+KBUILD_CFLAGS  += $(call cc-disable-warning, misleading-indentation)
+KBUILD_CFLAGS  += $(call cc-disable-warning, memset-elt-size)
+KBUILD_CFLAGS  += $(call cc-disable-warning, parentheses)
+KBUILD_CFLAGS  += $(call cc-disable-warning, bool-compare)
+KBUILD_CFLAGS  += $(call cc-disable-warning, bool-operation)
+KBUILD_CFLAGS  += $(call cc-disable-warning, duplicate-decl-specifier)
+KBUILD_CFLAGS  += $(call cc-disable-warning, switch-unreachable)
+KBUILD_CFLAGS  += $(call cc-disable-warning, array-bounds)
+KBUILD_CFLAGS  += $(call cc-disable-warning, stringop-overflow)
+KBUILD_CFLAGS  += $(call cc-option,-fno-PIE)
+KBUILD_AFLAGS  += $(call cc-option,-fno-PIE)
+
+# Disable unused-constant-variable warnings
+KBUILD_CFLAGS   += $(call cc-disable-warning,unused-const-variable,)
+
+# Disable format-truncation warnings
+KBUILD_CFLAGS   += $(call cc-disable-warning,format-truncation,)
+
+# Needed to unbreak GCC 7.x and above
+KBUILD_CFLAGS   += $(call cc-option,-fno-store-merging,)
+
+
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
@@ -638,6 +656,9 @@ KBUILD_CFLAGS += $(call cc-option,-fno-reorder-blocks,) \
                  $(call cc-option,-fno-ipa-cp-clone,) \
                  $(call cc-option,-fno-partial-inlining)
 endif
+
+#Cortex A53 Optimization
+KBUILD_CFLAGS += -mtune=cortex-a53
 
 ifneq ($(CONFIG_FRAME_WARN),0)
 KBUILD_CFLAGS += $(call cc-option,-Wframe-larger-than=${CONFIG_FRAME_WARN})
